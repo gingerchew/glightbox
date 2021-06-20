@@ -1742,6 +1742,10 @@
     img.src = data.href;
     img.alt = '';
 
+    if (!isNil(data.srcset) && data.srcset !== '') {
+      img.setAttribute('srcset', data.srcset);
+    }
+
     if (data.title !== '') {
       img.setAttribute('aria-labelledby', titleID);
     }
@@ -1976,7 +1980,8 @@
         height: '',
         content: false,
         zoomable: true,
-        draggable: true
+        draggable: true,
+        srcset: ''
       };
 
       if (isObject(slideParamas)) {
@@ -2048,18 +2053,25 @@
         }
 
         var url = '';
+        var srcset = '';
         var config = element.getAttribute('data-glightbox');
         var nodeType = element.nodeName.toLowerCase();
 
         if (nodeType === 'a') {
           url = element.href;
+
+          if ('glightboxSrcset' in element.dataset) {
+            srcset = element.dataset.glightboxSrcset;
+          }
         }
 
         if (nodeType === 'img') {
           url = element.src;
+          srcset = element.srcset;
         }
 
         data.href = url;
+        data.srcset = srcset;
         each(data, function (val, key) {
           if (has(settings, key) && key !== 'width') {
             data[key] = settings[key];
