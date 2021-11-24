@@ -6,7 +6,7 @@
  * @param {int} index
  * @param {function} callback
  */
-import { has, closest, injectAssets, addClass, removeClass, createHTML, isFunction, waitUntil } from '../utils/helpers.js';
+import { has, closest, injectAssets, addClass, removeClass, createHTML, isFunction, waitUntil, checkVideoUrl, checkVideoSource, isLocalVideo } from '../utils/helpers.js';
 
 export default function slideVideo(slide, data, index, callback) {
     const slideContainer = slide.querySelector('.ginner-container');
@@ -34,23 +34,24 @@ export default function slideVideo(slide, data, index, callback) {
     slideMedia.style.maxWidth = data.width;
 
     injectAssets(this.settings.plyr.js, 'Plyr', () => {
+
+        const videoType = checkVideoUrl(url);
+        let videoSource = checkVideoSource(data);
+
         // Set vimeo videos
-        if (url.match(/vimeo\.com\/([0-9]*)/)) {
+        if (videoType === 'vimeo' || videoSource === 'vimeo') {
             const vimeoID = /vimeo.*\/(\d+)/i.exec(url);
-            videoSource = 'vimeo';
             embedID = vimeoID[1];
         }
 
         // Set youtube videos
-        if (url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/)) {
+        if (videoType === 'youtube' || videoSource === 'youtube') {
             const youtubeID = getYoutubeID(url);
-            videoSource = 'youtube';
             embedID = youtubeID;
         }
 
         // Set local videos
-        if (url.match(/\.(mp4|ogg|webm|mov)$/) !== null) {
-            videoSource = 'local';
+        if (videoType === 'local' || videoSource === 'local') {
             let html = '<video id="' + videoID + '" ';
             html += `style="background:#000; max-width: ${data.width};" `;
             html += 'preload="metadata" ';
@@ -61,8 +62,14 @@ export default function slideVideo(slide, data, index, callback) {
 
             let format = url.toLowerCase().split('.').pop();
             let sources = { mp4: '', ogg: '', webm: '' };
+            let sourceFormat = data.videoSource;
             format = format == 'mov' ? 'mp4' : format;
-            sources[format] = url;
+
+            if (format in sources) {
+                sources[format] = url;
+            } else if (sourceFormat in sources) {
+                sources[sourceFormat] = url;
+            }
 
             for (let key in sources) {
                 if (sources.hasOwnProperty(key)) {
@@ -78,6 +85,8 @@ export default function slideVideo(slide, data, index, callback) {
             html += '</video>';
             customPlaceholder = createHTML(html);
         }
+
+        videoSource = videoType;
 
         // prettier-ignore
         const placeholder = customPlaceholder ? customPlaceholder : createHTML(`<div id="${videoID}" data-plyr-provider="${videoSource}" data-plyr-embed-id="${embedID}"></div>`);

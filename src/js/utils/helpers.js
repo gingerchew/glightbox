@@ -543,3 +543,44 @@ export function size(o) {
 export function isNumber(n) {
     return !isNaN(parseFloat(n)) && isFinite(n);
 }
+
+export function isYoutubeVideo(url = '') {
+    return url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/);
+}
+
+export function isVimeoVideo(url = '') {
+    return url.match(/vimeo\.com\/([0-9]*)/);
+}
+
+export function isLocalVideo(url = '') {
+    return url.match(/\.(mp4|ogg|webm|mov)$/) !== null;
+}
+
+/**
+ * Parse slide defaults to see what video source it is by parsing the URL
+ * or if the videoSrc has been defined
+ * 
+ * @param {string} url 
+ */
+export function checkVideoUrl(url = '') {
+    if (isYoutubeVideo(url)) {
+        return 'youtube';
+    }
+    if (isVimeoVideo(url)) {
+        return 'vimeo';
+    }
+    if (isLocalVideo(url)) {
+        return 'local';
+    }
+
+    return false;
+}
+
+export function checkVideoSource({ videoSource = false }) {
+    if (!videoSource) return false;
+    if (isLocalVideo('.'+videoSource)) {
+        return 'local';
+    }
+
+    if (['youtube', 'vimeo'].includes(videoSource)) return videoSource;
+}

@@ -55,7 +55,7 @@ export default class Slide {
         // used for image accessiblity
         let titleID = 'gSlideTitle_' + this.index;
         let textID = 'gSlideDesc_' + this.index;
-
+        
         if (isFunction(settings.afterSlideLoad)) {
             finalCallback = () => {
                 if (isFunction(callback)) {

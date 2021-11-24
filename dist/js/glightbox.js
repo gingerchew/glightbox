@@ -527,6 +527,46 @@
   function isNumber(n) {
     return !isNaN(parseFloat(n)) && isFinite(n);
   }
+  function isYoutubeVideo() {
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    return url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/);
+  }
+  function isVimeoVideo() {
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    return url.match(/vimeo\.com\/([0-9]*)/);
+  }
+  function isLocalVideo() {
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+    return url.match(/\.(mp4|ogg|webm|mov)$/) !== null;
+  }
+  function checkVideoUrl() {
+    var url = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : '';
+
+    if (isYoutubeVideo(url)) {
+      return 'youtube';
+    }
+
+    if (isVimeoVideo(url)) {
+      return 'vimeo';
+    }
+
+    if (isLocalVideo(url)) {
+      return 'local';
+    }
+
+    return false;
+  }
+  function checkVideoSource(_ref2) {
+    var _ref2$videoSource = _ref2.videoSource,
+        videoSource = _ref2$videoSource === void 0 ? false : _ref2$videoSource;
+    if (!videoSource) return false;
+
+    if (isLocalVideo('.' + videoSource)) {
+      return 'local';
+    }
+
+    if (['youtube', 'vimeo'].includes(videoSource)) return videoSource;
+  }
 
   function getNextFocusElement() {
     var current = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : -1;
@@ -1775,7 +1815,6 @@
     injectAssets(this.settings.plyr.css, 'Plyr');
     var url = data.href;
     var protocol = location.protocol.replace(':', '');
-    var videoSource = '';
     var embedID = '';
     var customPlaceholder = false;
 
@@ -1785,20 +1824,20 @@
 
     slideMedia.style.maxWidth = data.width;
     injectAssets(this.settings.plyr.js, 'Plyr', function () {
-      if (url.match(/vimeo\.com\/([0-9]*)/)) {
+      var videoType = checkVideoUrl(url);
+      var videoSource = checkVideoSource(data);
+
+      if (videoType === 'vimeo' || videoSource === 'vimeo') {
         var vimeoID = /vimeo.*\/(\d+)/i.exec(url);
-        videoSource = 'vimeo';
         embedID = vimeoID[1];
       }
 
-      if (url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/)) {
+      if (videoType === 'youtube' || videoSource === 'youtube') {
         var youtubeID = getYoutubeID(url);
-        videoSource = 'youtube';
         embedID = youtubeID;
       }
 
-      if (url.match(/\.(mp4|ogg|webm|mov)$/) !== null) {
-        videoSource = 'local';
+      if (videoType === 'local' || videoSource === 'local') {
         var html = '<video id="' + videoID + '" ';
         html += "style=\"background:#000; max-width: ".concat(data.width, ";\" ");
         html += 'preload="metadata" ';
@@ -1812,8 +1851,14 @@
           ogg: '',
           webm: ''
         };
+        var sourceFormat = data.videoSource;
         format = format == 'mov' ? 'mp4' : format;
-        sources[format] = url;
+
+        if (format in sources) {
+          sources[format] = url;
+        } else if (sourceFormat in sources) {
+          sources[sourceFormat] = url;
+        }
 
         for (var key in sources) {
           if (sources.hasOwnProperty(key)) {
@@ -1833,6 +1878,7 @@
         customPlaceholder = createHTML(html);
       }
 
+      videoSource = videoType;
       var placeholder = customPlaceholder ? customPlaceholder : createHTML("<div id=\"".concat(videoID, "\" data-plyr-provider=\"").concat(videoSource, "\" data-plyr-embed-id=\"").concat(embedID, "\"></div>"));
       addClass(videoWrapper, "".concat(videoSource, "-video gvideo"));
       videoWrapper.appendChild(placeholder);
@@ -1976,7 +2022,8 @@
         height: '',
         content: false,
         zoomable: true,
-        draggable: true
+        draggable: true,
+        videoSource: false
       };
 
       if (isObject(slideParamas)) {
@@ -1986,7 +2033,7 @@
 
     _createClass(SlideConfigParser, [{
       key: "sourceType",
-      value: function sourceType(url) {
+      value: function sourceType(url, data) {
         var origin = url;
         url = url.toLowerCase();
 
@@ -1994,15 +2041,11 @@
           return 'image';
         }
 
-        if (url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/)) {
+        if (!!checkVideoUrl(url)) {
           return 'video';
         }
 
-        if (url.match(/vimeo\.com\/([0-9]*)/)) {
-          return 'video';
-        }
-
-        if (url.match(/\.(mp4|ogg|webm|mov)$/) !== null) {
+        if (!!checkVideoSource(data)) {
           return 'video';
         }
 
@@ -2077,7 +2120,7 @@
         }
 
         if (!data.type && url) {
-          data.type = this.sourceType(url);
+          data.type = this.sourceType(url, data);
         }
 
         if (!isNil(config)) {

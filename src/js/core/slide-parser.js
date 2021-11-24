@@ -1,4 +1,4 @@
-import { extend, has, each, isNil, isNode, isObject, isNumber } from '../utils/helpers.js';
+import { extend, has, each, isNil, isNode, isObject, isNumber, checkVideoUrl, checkVideoSource } from '../utils/helpers.js';
 
 export default class SlideConfigParser {
     constructor(slideParamas = {}) {
@@ -13,7 +13,8 @@ export default class SlideConfigParser {
             height: '',
             content: false,
             zoomable: true,
-            draggable: true
+            draggable: true,
+            videoSource: false,
         };
 
         if (isObject(slideParamas)) {
@@ -26,23 +27,24 @@ export default class SlideConfigParser {
      * gte the source type of a url
      *
      * @param {string} url
+     * @param {object} data - slideConfig style object
      */
-    sourceType(url) {
+    sourceType(url, data) {
         let origin = url;
         url = url.toLowerCase();
 
         if (url.match(/\.(jpeg|jpg|jpe|gif|png|apn|webp|svg)$/) !== null) {
             return 'image';
         }
-        if (url.match(/(youtube\.com|youtube-nocookie\.com)\/watch\?v=([a-zA-Z0-9\-_]+)/) || url.match(/youtu\.be\/([a-zA-Z0-9\-_]+)/) || url.match(/(youtube\.com|youtube-nocookie\.com)\/embed\/([a-zA-Z0-9\-_]+)/)) {
+
+        if (!!checkVideoUrl(url)) {
+            return 'video'
+        }
+
+        if (!!checkVideoSource(data)) {
             return 'video';
         }
-        if (url.match(/vimeo\.com\/([0-9]*)/)) {
-            return 'video';
-        }
-        if (url.match(/\.(mp4|ogg|webm|mov)$/) !== null) {
-            return 'video';
-        }
+
         if (url.match(/\.(mp3|wav|wma|aac|ogg)$/) !== null) {
             return 'audio';
         }
@@ -106,7 +108,7 @@ export default class SlideConfigParser {
         }
 
         if (!data.type && url) {
-            data.type = this.sourceType(url);
+            data.type = this.sourceType(url, data);
         }
 
         if (!isNil(config)) {
